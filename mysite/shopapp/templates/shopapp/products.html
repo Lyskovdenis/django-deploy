@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Продукты{% endblock %}
+
+{% block content %}
+<h1>Список продуктов</h1>
+<ul>
+{% for product in products %}
+    <li>
+        <strong>{{ product.name }}</strong> - ${{ product.price }}
+        <br>
+        {{ product.description }}
+        <br>
+        В наличии: {{ product.stock }} шт.
+        <br>
+        {% if product.is_available %}Доступен{% else %}Недоступен{% endif %}
+        <br>
+        Создан: {{ product.created_at }}
+    </li>
+{% endfor %}
+</ul>
+{% endblock %}
