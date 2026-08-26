@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Магазин{% endblock %}
+
+{% block content %}
+<h1>Добро пожаловать в магазин!</h1>
+<ul>
+    <li><a href="{% url 'shopapp:products' %}">Список продуктов</a></li>
+    <li><a href="{% url 'shopapp:orders' %}">Список заказов</a></li>
+    <li><a href="{% url 'shopapp:shop' %}">Старая страница магазина</a></li>
+</ul>
+{% endblock %}
