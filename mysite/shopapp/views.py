@@ -1,5 +1,10 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib import messages
 from .models import Product, Order
+from .forms import FileUploadForm  # Импортируем форму
+import os
+
+MAX_FILE_SIZE = 1 * 1024 * 1024  # 1 MB в байтах
 
 
 def shop_index(request):
@@ -19,3 +24,32 @@ def orders_list(request):
 def shop_view(request):
     products = Product.objects.all()
     return render(request, 'shopapp/shop.html', {'products': products})
+
+
+def upload_file(request):
+    """View для загрузки файлов с ограничением по размеру"""
+    if request.method == 'POST':
+        form = FileUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            uploaded_file = request.FILES['file']
+
+            # Проверка размера файла
+            if uploaded_file.size > MAX_FILE_SIZE:
+                messages.error(request, 'Файл слишком большой! Максимальный размер: 1 MB')
+                return redirect('shopapp:upload_file')
+
+            # Сохранение файла
+            file_path = os.path.join('uploads', uploaded_file.name)
+            os.makedirs('uploads', exist_ok=True)
+
+            with open(file_path, 'wb+') as destination:
+                for chunk in uploaded_file.chunks():
+                    destination.write(chunk)
+
+            messages.success(request, f'Файл {uploaded_file.name} успешно загружен!')
+            return redirect('shopapp:upload_file')
+    else:
+        form = FileUploadForm()
+
+    return render(request, 'shopapp/upload_file.html', {'form': form})
+
