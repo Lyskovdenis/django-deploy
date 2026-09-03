@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .models import Product, Order
-from .forms import FileUploadForm  # Импортируем форму
+from .forms import FileUploadForm, ProductForm, OrderForm
 import os
 
 MAX_FILE_SIZE = 1 * 1024 * 1024  # 1 MB в байтах
@@ -33,12 +33,10 @@ def upload_file(request):
         if form.is_valid():
             uploaded_file = request.FILES['file']
 
-            # Проверка размера файла
             if uploaded_file.size > MAX_FILE_SIZE:
                 messages.error(request, 'Файл слишком большой! Максимальный размер: 1 MB')
                 return redirect('shopapp:upload_file')
 
-            # Сохранение файла
             file_path = os.path.join('uploads', uploaded_file.name)
             os.makedirs('uploads', exist_ok=True)
 
@@ -53,3 +51,30 @@ def upload_file(request):
 
     return render(request, 'shopapp/upload_file.html', {'form': form})
 
+
+def create_product(request):
+    """View для создания продукта"""
+    if request.method == 'POST':
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Продукт успешно создан!')
+            return redirect('shopapp:products')
+    else:
+        form = ProductForm()
+
+    return render(request, 'shopapp/create_product.html', {'form': form})
+
+
+def create_order(request):
+    """View для создания заказа"""
+    if request.method == 'POST':
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Заказ успешно создан!')
+            return redirect('shopapp:orders')
+    else:
+        form = OrderForm()
+
+    return render(request, 'shopapp/create_order.html', {'form': form})
