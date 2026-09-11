@@ -1,50 +1,46 @@
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .models import Product, Order
-from .forms import FileUploadForm, ProductForm, OrderForm
 import os
 
-MAX_FILE_SIZE = 1 * 1024 * 1024  # 1 MB в байтах
+from django.contrib import messages
+from django.shortcuts import redirect, render
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+
+from .forms import FileUploadForm, OrderForm, ProductForm
+from .models import Order, Product
 
 
 def shop_index(request):
     return render(request, 'shopapp/index.html')
 
 
-def products_list(request):
-    products = Product.objects.all()
-    return render(request, 'shopapp/products.html', {'products': products})
-
-
-def orders_list(request):
-    orders = Order.objects.all().select_related('customer').prefetch_related('products')
-    return render(request, 'shopapp/orders.html', {'orders': orders})
-
-
-def shop_view(request):
-    products = Product.objects.all()
-    return render(request, 'shopapp/shop.html', {'products': products})
+MAX_FILE_SIZE = 1 * 1024 * 1024
 
 
 def upload_file(request):
-    """View для загрузки файлов с ограничением по размеру"""
     if request.method == 'POST':
         form = FileUploadForm(request.POST, request.FILES)
+
         if form.is_valid():
             uploaded_file = request.FILES['file']
 
             if uploaded_file.size > MAX_FILE_SIZE:
-                messages.error(request, 'Файл слишком большой! Максимальный размер: 1 MB')
+                messages.error(
+                    request,
+                    'Файл слишком большой. Максимальный размер: 1 MB.'
+                )
                 return redirect('shopapp:upload_file')
 
-            file_path = os.path.join('uploads', uploaded_file.name)
             os.makedirs('uploads', exist_ok=True)
+            file_path = os.path.join('uploads', uploaded_file.name)
 
             with open(file_path, 'wb+') as destination:
                 for chunk in uploaded_file.chunks():
                     destination.write(chunk)
 
-            messages.success(request, f'Файл {uploaded_file.name} успешно загружен!')
+            messages.success(
+                request,
+                f'Файл «{uploaded_file.name}» успешно загружен!'
+            )
             return redirect('shopapp:upload_file')
     else:
         form = FileUploadForm()
@@ -52,29 +48,88 @@ def upload_file(request):
     return render(request, 'shopapp/upload_file.html', {'form': form})
 
 
-def create_product(request):
-    """View для создания продукта"""
-    if request.method == 'POST':
-        form = ProductForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Продукт успешно создан!')
-            return redirect('shopapp:products')
-    else:
-        form = ProductForm()
+class ProductListView(ListView):
+    model = Product
+    template_name = 'shopapp/products_list.html'
+    context_object_name = 'products'
 
-    return render(request, 'shopapp/create_product.html', {'form': form})
+    def get_queryset(self):
+        return Product.objects.filter(is_archived=False)
 
 
-def create_order(request):
-    """View для создания заказа"""
-    if request.method == 'POST':
-        form = OrderForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Заказ успешно создан!')
-            return redirect('shopapp:orders')
-    else:
-        form = OrderForm()
+class ProductDetailView(DetailView):
+    model = Product
+    template_name = 'shopapp/product_detail.html'
+    context_object_name = 'product'
 
-    return render(request, 'shopapp/create_order.html', {'form': form})
+
+class ProductCreateView(CreateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'shopapp/product_form.html'
+    success_url = reverse_lazy('shopapp:products_list')
+
+
+class ProductUpdateView(UpdateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'shopapp/product_form.html'
+    success_url = reverse_lazy('shopapp:products_list')
+
+
+class ProductArchiveView(UpdateView):
+    model = Product
+    fields = []
+    template_name = 'shopapp/product_archive_confirm.html'
+    success_url = reverse_lazy('shopapp:products_list')
+
+    def form_valid(self, form):
+        form.instance.is_archived = True
+        return super().form_valid(form)
+
+
+class OrderListView(ListView):
+    model = Order
+    template_name = 'shopapp/orders_list.html'
+    context_object_name = 'orders'
+
+    def get_queryset(self):
+        return (
+            Order.objects
+            .select_related('customer')
+            .prefetch_related('products')
+        )
+
+
+class OrderDetailView(DetailView):
+    model = Order
+    template_name = 'shopapp/order_detail.html'
+    context_object_name = 'order'
+
+    def get_queryset(self):
+        return (
+            Order.objects
+            .select_related('customer')
+            .prefetch_related('products')
+        )
+
+
+class OrderCreateView(CreateView):
+    model = Order
+    form_class = OrderForm
+    template_name = 'shopapp/order_form.html'
+    success_url = reverse_lazy('shopapp:orders_list')
+
+
+class OrderUpdateView(UpdateView):
+    model = Order
+    form_class = OrderForm
+    template_name = 'shopapp/order_form.html'
+    success_url = reverse_lazy('shopapp:orders_list')
+
+
+class OrderDeleteView(DeleteView):
+    model = Order
+    template_name = 'shopapp/order_delete_confirm.html'
+    context_object_name = 'order'
+    success_url = reverse_lazy('shopapp:orders_list')

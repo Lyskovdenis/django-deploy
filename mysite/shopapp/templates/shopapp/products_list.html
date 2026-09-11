@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Продукты{% endblock %}
+
+{% block content %}
+<h1>Продукты</h1>
+
+<p>
+    <a href="{% url 'shopapp:product_create' %}">Создать продукт</a>
+</p>
+
+{% if products %}
+    <table border="1" cellpadding="10">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Цена</th>
+                <th>Скидка</th>
+                <th>На складе</th>
+                <th>Доступен</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+                <tr>
+                    <td>
+                        <a href="{% url 'shopapp:product_detail' product.pk %}">
+                            {{ product.name }}
+                        </a>
+                    </td>
+                    <td>{{ product.description }}</td>
+                    <td>{{ product.price }}</td>
+                    <td>{{ product.discount }}</td>
+                    <td>{{ product.stock }}</td>
+                    <td>{{ product.is_available }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Неархивированных продуктов пока нет.</p>
+{% endif %}
+
+<p>
+    <a href="{% url 'shopapp:index' %}">На главную</a>
+</p>
+{% endblock %}

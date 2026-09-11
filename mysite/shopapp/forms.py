@@ -1,5 +1,6 @@
 from django import forms
-from .models import Product, Order
+
+from .models import Order, Product
 
 
 class FileUploadForm(forms.Form):
@@ -9,7 +10,14 @@ class FileUploadForm(forms.Form):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'description', 'price', 'discount', 'stock', 'is_available']
+        fields = [
+            'name',
+            'description',
+            'price',
+            'discount',
+            'stock',
+            'is_available',
+        ]
         labels = {
             'name': 'Название',
             'description': 'Описание',
@@ -25,6 +33,10 @@ class OrderForm(forms.ModelForm):
         model = Order
         fields = ['customer', 'products']
         labels = {
-            'customer': 'Клиент',
+            'customer': 'Пользователь',
             'products': 'Продукты',
+        }
+
+        widgets = {
+            'products': forms.CheckboxSelectMultiple(),
         }
