@@ -5,9 +5,11 @@
 {% block content %}
 <h1>Продукты</h1>
 
-<p>
-    <a href="{% url 'shopapp:product_create' %}">Создать продукт</a>
-</p>
+{% if perms.shopapp.can_create_product %}
+  <p>
+      <a href="{% url 'shopapp:product_create' %}">Создать продукт</a>
+  </p>
+{% endif %}
 
 {% if products %}
     <table border="1" cellpadding="10">
@@ -19,6 +21,7 @@
                 <th>Скидка</th>
                 <th>На складе</th>
                 <th>Доступен</th>
+                <th>Действия</th>
             </tr>
         </thead>
         <tbody>
@@ -34,6 +37,13 @@
                     <td>{{ product.discount }}</td>
                     <td>{{ product.stock }}</td>
                     <td>{{ product.is_available }}</td>
+                    <td>
+                        {% if user.is_superuser %}
+                            <a href="{% url 'shopapp:product_update' product.pk %}">Редактировать</a>
+                        {% elif perms.shopapp.can_edit_product and product.created_by == user %}
+                            <a href="{% url 'shopapp:product_update' product.pk %}">Редактировать</a>
+                        {% endif %}
+                    </td>
                 </tr>
             {% endfor %}
         </tbody>

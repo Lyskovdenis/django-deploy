@@ -1,7 +1,9 @@
 import os
 
 from django.contrib import messages
-from django.shortcuts import redirect, render
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
+from django.core.exceptions import PermissionDenied
+from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
@@ -63,18 +65,38 @@ class ProductDetailView(DetailView):
     context_object_name = 'product'
 
 
-class ProductCreateView(CreateView):
+class ProductCreateView(PermissionRequiredMixin, LoginRequiredMixin, CreateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'shopapp/product_form.html'
+    success_url = reverse_lazy('shopapp:products_list')
+    permission_required = 'shopapp.can_create_product'
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+
+
+class ProductUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Product
     form_class = ProductForm
     template_name = 'shopapp/product_form.html'
     success_url = reverse_lazy('shopapp:products_list')
 
+    def test_func(self):
+        product = get_object_or_404(Product, pk=self.kwargs['pk'])
+        user = self.request.user
 
-class ProductUpdateView(UpdateView):
-    model = Product
-    form_class = ProductForm
-    template_name = 'shopapp/product_form.html'
-    success_url = reverse_lazy('shopapp:products_list')
+        if user.is_superuser:
+            return True
+
+        has_perm = user.has_perm('shopapp.can_edit_product')
+        is_author = product.created_by == user
+
+        return has_perm and is_author
+
+    def handle_no_permission(self):
+        raise PermissionDenied
 
 
 class ProductArchiveView(UpdateView):

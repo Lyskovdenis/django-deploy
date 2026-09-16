@@ -13,6 +13,21 @@ class Product(models.Model):
     is_available = models.BooleanField(default=True)
     is_archived = models.BooleanField(default=False)
 
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='products',
+        verbose_name='Создатель',
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        permissions = [
+            ('can_create_product', 'Может создавать продукты'),
+            ('can_edit_product', 'Может редактировать продукты'),
+        ]
+
     def __str__(self):
         return self.name
 
