@@ -20,4 +20,6 @@ urlpatterns = [
     path('orders/<int:pk>/delete/', views.OrderDeleteView.as_view(), name='order_delete'),
 
     path('upload/', views.upload_file, name='upload_file'),
+
+    path('orders/export/', views.OrdersExportView.as_view(), name='orders_export'),
 ]

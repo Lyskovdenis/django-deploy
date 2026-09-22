@@ -3,8 +3,10 @@ import os
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from .forms import FileUploadForm, OrderForm, ProductForm
@@ -155,3 +157,27 @@ class OrderDeleteView(DeleteView):
     template_name = 'shopapp/order_delete_confirm.html'
     context_object_name = 'order'
     success_url = reverse_lazy('shopapp:orders_list')
+
+
+class OrdersExportView(UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get(self, request):
+        orders = (
+            Order.objects
+            .select_related('customer')
+            .prefetch_related('products')
+        )
+
+        orders_data = []
+        for order in orders:
+            orders_data.append({
+                'id': order.id,
+                'address': order.customer_name,
+                'promo_code': order.notes,
+                'user_id': order.customer.id,
+                'product_ids': list(order.products.values_list('id', flat=True)),
+            })
+
+        return JsonResponse({'orders': orders_data})
