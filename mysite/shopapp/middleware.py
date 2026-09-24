@@ -17,7 +17,18 @@ class ThrottlingMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if not request.path.startswith(SHOP_PREFIX):
+        path_parts = request.path_info.strip('/').split('/')
+
+        language_codes = {'ru', 'en'}
+
+        if path_parts and path_parts[0] in language_codes:
+            path_parts = path_parts[1:]
+
+        is_shop_request = bool(
+            path_parts and path_parts[0] == 'shop'
+        )
+
+        if not is_shop_request:
             return self.get_response(request)
 
         ip = self.get_client_ip(request)
