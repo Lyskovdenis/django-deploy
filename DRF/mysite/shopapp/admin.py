@@ -1,86 +1,92 @@
 from django.contrib import admin
-from django.db.models import QuerySet
-from django.http import HttpRequest
+from django.utils.translation import gettext_lazy as _
 
-from .models import Product, Order, ProductImage
-from .admin_mixins import ExportAsCSVMixin
+from .models import Order, Product
 
 
 class OrderInline(admin.TabularInline):
-    model = Product.orders.through
-
-
-class ProductInline(admin.StackedInline):
-    model = ProductImage
-
-
-@admin.action(description="Archive products")
-def mark_archived(modeladmin: admin.ModelAdmin, request: HttpRequest, queryset: QuerySet):
-    queryset.update(archived=True)
-
-
-@admin.action(description="Unarchive products")
-def mark_unarchived(modeladmin: admin.ModelAdmin, request: HttpRequest, queryset: QuerySet):
-    queryset.update(archived=False)
+    model = Order.products.through
+    extra = 0
+    verbose_name = _('order')
+    verbose_name_plural = _('orders')
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin, ExportAsCSVMixin):
-    actions = [
-        mark_archived,
-        mark_unarchived,
-        "export_csv",
-    ]
-    inlines = [
-        OrderInline,
-        ProductInline,
-    ]
-    # list_display = "pk", "name", "description", "price", "discount"
-    list_display = "pk", "name", "description_short", "price", "discount", "archived"
-    list_display_links = "pk", "name"
-    ordering = "-name", "pk"
-    search_fields = "name", "description"
+class ProductAdmin(admin.ModelAdmin):
+    list_display = (
+        'name',
+        'price',
+        'discount',
+        'stock',
+        'is_available',
+        'is_archived',
+        'created_at',
+    )
+    search_fields = (
+        'name',
+        'description',
+        'price',
+        'discount',
+    )
+    list_filter = (
+        'is_available',
+        'is_archived',
+        'created_at',
+    )
     fieldsets = [
-        (None, {
-           "fields": ("name", "description"),
-        }),
-        ("Price options", {
-            "fields": ("price", "discount"),
-            "classes": ("wide", "collapse"),
-        }),
-        ("Images", {
-            "fields": ("preview", ),
-        }),
-        ("Extra options", {
-            "fields": ("archived",),
-            "classes": ("collapse",),
-            "description": "Extra options. Field 'archived' is for soft delete",
-        })
+        (
+            None,
+            {
+                'fields': (
+                    'name',
+                    'description',
+                ),
+            },
+        ),
+        (
+            _('Price'),
+            {
+                'fields': (
+                    'price',
+                    'discount',
+                ),
+            },
+        ),
+        (
+            _('Additional options'),
+            {
+                'fields': (
+                    'stock',
+                    'is_available',
+                    'is_archived',
+                    'created_at',
+                ),
+                'classes': ('collapse',),
+            },
+        ),
     ]
+    inlines = [OrderInline]
+    actions = ['archive_products']
 
-    def description_short(self, obj: Product) -> str:
-        if len(obj.description) < 48:
-            return obj.description
-        return obj.description[:48] + "..."
+    def archive_products(self, request, queryset):
+        queryset.update(is_archived=True)
 
-
-# admin.site.register(Product, ProductAdmin)
-
-
-# class ProductInline(admin.TabularInline):
-class ProductInline(admin.StackedInline):
-    model = Order.products.through
+    archive_products.short_description = _(
+        'Archive selected products',
+    )
 
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    inlines = [
-        ProductInline,
-    ]
-    list_display = "delivery_address", "promocode", "created_at", "user_verbose"
-
-    def get_queryset(self, request):
-        return Order.objects.select_related("user").prefetch_related("products")
-
-    def user_verbose(self, obj: Order) -> str:
-        return obj.user.first_name or obj.user.username
+    list_display = (
+        'id',
+        'customer_name',
+        'customer',
+        'created_at',
+    )
+    search_fields = (
+        'customer_name',
+        'customer__username',
+        'notes',
+    )
+    filter_horizontal = ('products',)

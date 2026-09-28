@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Users{% endblock %}
+
+{% block content %}
+    <h1>Users</h1>
+
+    <ul>
+        {% for user in users %}
+            <li>
+                <a href="{% url 'accounts:profile_detail' user.pk %}">
+                    {{ user.username }}
+                </a>
+            </li>
+        {% empty %}
+            <li>No users found.</li>
+        {% endfor %}
+    </ul>
+
+    <p>
+        <a href="{% url 'accounts:about_me' %}">
+            Back to my profile
+        </a>
+    </p>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Загрузка файла{% endblock %}
+
+{% block content %}
+<h1>Загрузка файла</h1>
+
+{% if messages %}
+    {% for message in messages %}
+        <div style="padding: 10px; margin: 10px 0; border-radius: 5px; {% if message.tags == 'error' %}background-color: #f8d7da; color: #721c24{% else %}background-color: #d4edda; color: #155724{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Загрузить</button>
+</form>
+
+<p>Максимальный размер файла: 1 MB</p>
+
+<a href="{% url 'shopapp:index' %}">На главную</a>
+{% endblock %}

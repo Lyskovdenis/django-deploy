@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% blocktranslate with product_name=product.name %}Product details: {{ product_name }}{% endblocktranslate %}{% endblock %}
+
+{% block content %}
+<h1>{% blocktranslate with product_name=product.name %}Product details: {{ product_name }}{% endblocktranslate %}</h1>
+
+<p>
+    <strong>{% translate "Description" %}:</strong>
+    {{ product.description }}
+</p>
+
+<p>
+    <strong>{% translate "Price" %}:</strong>
+    {{ product.price }}
+</p>
+
+<p>
+    <strong>{% translate "Discount" %}:</strong>
+    {{ product.discount }}
+</p>
+
+<p>{% blocktranslate count stock_count=product.stock %}There is {{ stock_count }} item in stock.{% plural %}There are {{ stock_count }} items in stock.{% endblocktranslate %}</p>
+
+<p>
+    <strong>{% translate "Available" %}:</strong>
+    {% if product.is_available %}
+        {% translate "Yes" %}
+    {% else %}
+        {% translate "No" %}
+    {% endif %}
+</p>
+
+<p>
+    <a href="{% url 'shopapp:products_list' %}">
+        {% translate "Back to products list" %}
+    </a>
+</p>
+
+<p>
+    <a href="{% url 'shopapp:product_update' product.pk %}">
+        {% translate "Edit product" %}
+    </a>
+</p>
+
+<p>
+    <a href="{% url 'shopapp:product_archive' product.pk %}">
+        {% translate "Archive product" %}
+    </a>
+</p>
+{% endblock %}

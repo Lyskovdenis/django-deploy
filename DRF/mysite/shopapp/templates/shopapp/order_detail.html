@@ -1,27 +1,37 @@
-{% extends 'shopapp/base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}
-  Order #{{ object.pk }} details
-{% endblock %}
+{% block title %}Заказ №{{ order.pk }}{% endblock %}
 
-{% block body %}
-  <h1>Order #{{ object.pk }}</h1>
-  <div>
-    <p>Order by {% firstof object.user.first_name object.user.username %}</p>
-    <p>Promocode: <code>{{ object.promocode }}</code></p>
-    <p>Delivery address: {{ object.delivery_address }}</p>
-    <div>
-      Product in order:
-      <ul>
-        {% for product in object.products.all %}
-          <li>{{ product.name }} for ${{ product.price }}</li>
-        {% endfor %}
+{% block content %}
+<h1>Заказ №{{ order.pk }}</h1>
 
-      </ul>
-    </div>
-  </div>
+<p><strong>Пользователь:</strong> {{ order.customer }}</p>
+<p><strong>Адрес:</strong> {{ order.customer_name }}</p>
+<p><strong>Промокод:</strong> {{ order.notes }}</p>
 
-  <div>
-    <a href="{% url 'shopapp:orders_list' %}">Back to orders</a>
-  </div>
+<h2>Продукты в заказе</h2>
+
+<ul>
+    {% for product in order.products.all %}
+        <li>{{ product.name }} — {{ product.price }}</li>
+    {% empty %}
+        <li>В заказе пока нет продуктов.</li>
+    {% endfor %}
+</ul>
+
+<p>
+    <a href="{% url 'shopapp:orders_list' %}">Вернуться к списку заказов</a>
+</p>
+
+<p>
+    <a href="{% url 'shopapp:order_update' order.pk %}">
+        Редактировать заказ
+    </a>
+</p>
+
+<p>
+    <a href="{% url 'shopapp:order_delete' order.pk %}">
+        Удалить заказ
+    </a>
+</p>
 {% endblock %}
