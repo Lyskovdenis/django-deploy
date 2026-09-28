@@ -1,24 +1,18 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}My Shop{% endblock %}</title>
+  <meta charset="UTF-8">
+  <title>
+    {% block title %}
+      Base Title
+    {% endblock %}
+  </title>
 </head>
 <body>
-    <header>
-        <h1>Магазин</h1>
-        <nav>
-            <a href="/">Главная</a> |
-            <a href="/shop/">Каталог</a>
-        </nav>
-    </header>
 
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+{% block body %}
+  Base body
+{% endblock %}
 
-    <footer>
-        <p>&copy; 2026 My Shop</p>
-    </footer>
 </body>
 </html>

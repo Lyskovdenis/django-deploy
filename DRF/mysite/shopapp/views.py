@@ -1,183 +1,111 @@
-import os
+from timeit import default_timer
 
-from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
-from django.core.exceptions import PermissionDenied
-from django.http import JsonResponse
-from django.shortcuts import redirect, render, get_object_or_404
+from django.http import HttpResponse, HttpRequest, HttpResponseRedirect, JsonResponse
+from django.shortcuts import render, reverse
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 
-from .forms import FileUploadForm, OrderForm, ProductForm
-from .models import Order, Product
-
-
-def shop_index(request):
-    return render(request, 'shopapp/index.html')
+from .forms import ProductForm
+from .models import Product, Order, ProductImage
 
 
-MAX_FILE_SIZE = 1 * 1024 * 1024
+class ShopIndexView(View):
+    def get(self, request: HttpRequest) -> HttpResponse:
+        products = [
+            ('Laptop', 1999),
+            ('Desktop', 2999),
+            ('Smartphone', 999),
+        ]
+        context = {
+            "time_running": default_timer(),
+            "products": products,
+        }
+        return render(request, 'shopapp/shop-index.html', context=context)
 
 
-def upload_file(request):
-    if request.method == 'POST':
-        form = FileUploadForm(request.POST, request.FILES)
+class ProductDetailsView(DetailView):
+    template_name = "shopapp/products-details.html"
+    # model = Product
+    queryset = Product.objects.prefetch_related("images")
+    context_object_name = "product"
 
-        if form.is_valid():
-            uploaded_file = request.FILES['file']
 
-            if uploaded_file.size > MAX_FILE_SIZE:
-                messages.error(
-                    request,
-                    'Файл слишком большой. Максимальный размер: 1 MB.'
-                )
-                return redirect('shopapp:upload_file')
+class ProductsListView(ListView):
+    template_name = "shopapp/products-list.html"
+    # model = Product
+    context_object_name = "products"
+    queryset = Product.objects.filter(archived=False)
 
-            os.makedirs('uploads', exist_ok=True)
-            file_path = os.path.join('uploads', uploaded_file.name)
 
-            with open(file_path, 'wb+') as destination:
-                for chunk in uploaded_file.chunks():
-                    destination.write(chunk)
+class ProductCreateView(CreateView):
+    model = Product
+    fields = "name", "price", "description", "discount", "preview"
+    success_url = reverse_lazy("shopapp:products_list")
 
-            messages.success(
-                request,
-                f'Файл «{uploaded_file.name}» успешно загружен!'
+
+class ProductUpdateView(UpdateView):
+    model = Product
+    # fields = "name", "price", "description", "discount", "preview"
+    template_name_suffix = "_update_form"
+    form_class = ProductForm
+
+    def get_success_url(self):
+        return reverse(
+            "shopapp:product_details",
+            kwargs={"pk": self.object.pk},
+        )
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        for image in form.files.getlist("images"):
+            ProductImage.objects.create(
+                product=self.object,
+                image=image,
             )
-            return redirect('shopapp:upload_file')
-    else:
-        form = FileUploadForm()
 
-    return render(request, 'shopapp/upload_file.html', {'form': form})
+        return response
 
 
-class ProductListView(ListView):
+class ProductDeleteView(DeleteView):
     model = Product
-    template_name = 'shopapp/products_list.html'
-    context_object_name = 'products'
-
-    def get_queryset(self):
-        return Product.objects.filter(is_archived=False)
-
-
-class ProductDetailView(DetailView):
-    model = Product
-    template_name = 'shopapp/product_detail.html'
-    context_object_name = 'product'
-
-
-class ProductCreateView(PermissionRequiredMixin, LoginRequiredMixin, CreateView):
-    model = Product
-    form_class = ProductForm
-    template_name = 'shopapp/product_form.html'
-    success_url = reverse_lazy('shopapp:products_list')
-    permission_required = 'shopapp.can_create_product'
+    success_url = reverse_lazy("shopapp:products_list")
 
     def form_valid(self, form):
-        form.instance.created_by = self.request.user
-        return super().form_valid(form)
+        success_url = self.get_success_url()
+        self.object.archived = True
+        self.object.save()
+        return HttpResponseRedirect(success_url)
 
 
-class ProductUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    model = Product
-    form_class = ProductForm
-    template_name = 'shopapp/product_form.html'
-    success_url = reverse_lazy('shopapp:products_list')
-
-    def test_func(self):
-        product = get_object_or_404(Product, pk=self.kwargs['pk'])
-        user = self.request.user
-
-        if user.is_superuser:
-            return True
-
-        has_perm = user.has_perm('shopapp.can_edit_product')
-        is_author = product.created_by == user
-
-        return has_perm and is_author
-
-    def handle_no_permission(self):
-        raise PermissionDenied
+class OrdersListView(LoginRequiredMixin, ListView):
+    queryset = (
+        Order.objects
+        .select_related("user")
+        .prefetch_related("products")
+    )
 
 
-class ProductArchiveView(UpdateView):
-    model = Product
-    fields = []
-    template_name = 'shopapp/product_archive_confirm.html'
-    success_url = reverse_lazy('shopapp:products_list')
-
-    def form_valid(self, form):
-        form.instance.is_archived = True
-        return super().form_valid(form)
+class OrderDetailView(PermissionRequiredMixin, DetailView):
+    permission_required = "shopapp.view_order"
+    queryset = (
+        Order.objects
+        .select_related("user")
+        .prefetch_related("products")
+    )
 
 
-class OrderListView(ListView):
-    model = Order
-    template_name = 'shopapp/orders_list.html'
-    context_object_name = 'orders'
-
-    def get_queryset(self):
-        return (
-            Order.objects
-            .select_related('customer')
-            .prefetch_related('products')
-        )
-
-
-class OrderDetailView(DetailView):
-    model = Order
-    template_name = 'shopapp/order_detail.html'
-    context_object_name = 'order'
-
-    def get_queryset(self):
-        return (
-            Order.objects
-            .select_related('customer')
-            .prefetch_related('products')
-        )
-
-
-class OrderCreateView(CreateView):
-    model = Order
-    form_class = OrderForm
-    template_name = 'shopapp/order_form.html'
-    success_url = reverse_lazy('shopapp:orders_list')
-
-
-class OrderUpdateView(UpdateView):
-    model = Order
-    form_class = OrderForm
-    template_name = 'shopapp/order_form.html'
-    success_url = reverse_lazy('shopapp:orders_list')
-
-
-class OrderDeleteView(DeleteView):
-    model = Order
-    template_name = 'shopapp/order_delete_confirm.html'
-    context_object_name = 'order'
-    success_url = reverse_lazy('shopapp:orders_list')
-
-
-class OrdersExportView(UserPassesTestMixin, View):
-    def test_func(self):
-        return self.request.user.is_staff
-
-    def get(self, request):
-        orders = (
-            Order.objects
-            .select_related('customer')
-            .prefetch_related('products')
-        )
-
-        orders_data = []
-        for order in orders:
-            orders_data.append({
-                'id': order.id,
-                'address': order.customer_name,
-                'promo_code': order.notes,
-                'user_id': order.customer.id,
-                'product_ids': list(order.products.values_list('id', flat=True)),
-            })
-
-        return JsonResponse({'orders': orders_data})
+class ProductsDataExportView(View):
+    def get(self, request: HttpRequest) -> JsonResponse:
+        products = Product.objects.order_by('pk').all()
+        products_data = [
+            {
+                "pk": product.pk,
+                "name": product.name,
+                "price": product.price,
+                "archived": product.archived,
+            }
+            for product in products
+        ]
+        return JsonResponse({"products": products_data})

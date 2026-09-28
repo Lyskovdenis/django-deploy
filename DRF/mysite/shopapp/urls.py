@@ -1,97 +1,27 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
-from . import views
-from .api_views import OrderViewSet, ProductViewSet
-
-
-app_name = 'shopapp'
-
-
-router = DefaultRouter()
-
-router.register(
-    'products',
-    ProductViewSet,
-    basename='api-products',
+from .views import (
+    ShopIndexView,
+    ProductDetailsView,
+    ProductsListView,
+    OrdersListView,
+    OrderDetailView,
+    ProductCreateView,
+    ProductUpdateView,
+    ProductDeleteView,
+    ProductsDataExportView,
 )
 
-router.register(
-    'orders',
-    OrderViewSet,
-    basename='api-orders',
-)
-
+app_name = "shopapp"
 
 urlpatterns = [
-    path('', views.shop_index, name='index'),
-
-    path(
-        'products/',
-        views.ProductListView.as_view(),
-        name='products_list',
-    ),
-    path(
-        'products/create/',
-        views.ProductCreateView.as_view(),
-        name='product_create',
-    ),
-    path(
-        'products/<int:pk>/',
-        views.ProductDetailView.as_view(),
-        name='product_detail',
-    ),
-    path(
-        'products/<int:pk>/update/',
-        views.ProductUpdateView.as_view(),
-        name='product_update',
-    ),
-    path(
-        'products/<int:pk>/archive/',
-        views.ProductArchiveView.as_view(),
-        name='product_archive',
-    ),
-
-    path(
-        'orders/',
-        views.OrderListView.as_view(),
-        name='orders_list',
-    ),
-    path(
-        'orders/create/',
-        views.OrderCreateView.as_view(),
-        name='order_create',
-    ),
-    path(
-        'orders/<int:pk>/',
-        views.OrderDetailView.as_view(),
-        name='order_detail',
-    ),
-    path(
-        'orders/<int:pk>/update/',
-        views.OrderUpdateView.as_view(),
-        name='order_update',
-    ),
-    path(
-        'orders/<int:pk>/delete/',
-        views.OrderDeleteView.as_view(),
-        name='order_delete',
-    ),
-
-    path(
-        'upload/',
-        views.upload_file,
-        name='upload_file',
-    ),
-
-    path(
-        'orders/export/',
-        views.OrdersExportView.as_view(),
-        name='orders_export',
-    ),
-
-    path(
-        'api/',
-        include(router.urls),
-    ),
+    path("", ShopIndexView.as_view(), name="index"),
+    path("products/", ProductsListView.as_view(), name="products_list"),
+    path("products/export/", ProductsDataExportView.as_view(), name="products-export"),
+    path("products/create/", ProductCreateView.as_view(), name="product_create"),
+    path("products/<int:pk>/", ProductDetailsView.as_view(), name="product_details"),
+    path("products/<int:pk>/update/", ProductUpdateView.as_view(), name="product_update"),
+    path("products/<int:pk>/archive/", ProductDeleteView.as_view(), name="product_delete"),
+    path("orders/", OrdersListView.as_view(), name="orders_list"),
+    path("orders/<int:pk>/", OrderDetailView.as_view(), name="order_details"),
 ]

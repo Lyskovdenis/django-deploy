@@ -1,34 +1,20 @@
-{% extends 'base.html' %}
+{% extends 'shopapp/base.html' %}
 
 {% block title %}
-    {% if object %}
-        Редактирование продукта
-    {% else %}
-        Создание продукта
-    {% endif %}
+  Create product
 {% endblock %}
 
-{% block content %}
-    {% if object %}
-        <h1>Редактирование продукта: {{ object.name }}</h1>
-    {% else %}
-        <h1>Создание продукта</h1>
-    {% endif %}
-
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-
-        {% if object %}
-            <button type="submit">Сохранить изменения</button>
-        {% else %}
-            <button type="submit">Создать продукт</button>
-        {% endif %}
+{% block body %}
+  <h1>Create product</h1>
+  <div>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Create</button>
     </form>
-
-    <p>
-        <a href="{% url 'shopapp:products_list' %}">
-            Вернуться к списку продуктов
-        </a>
-    </p>
+  </div>
+  <div>
+    <a href="{% url 'shopapp:products_list' %}"
+    >Back to products list</a>
+  </div>
 {% endblock %}

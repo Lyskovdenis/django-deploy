@@ -1,92 +1,86 @@
 from django.contrib import admin
-from django.utils.translation import gettext_lazy as _
+from django.db.models import QuerySet
+from django.http import HttpRequest
 
-from .models import Order, Product
+from .models import Product, Order, ProductImage
+from .admin_mixins import ExportAsCSVMixin
 
 
 class OrderInline(admin.TabularInline):
-    model = Order.products.through
-    extra = 0
-    verbose_name = _('order')
-    verbose_name_plural = _('orders')
+    model = Product.orders.through
+
+
+class ProductInline(admin.StackedInline):
+    model = ProductImage
+
+
+@admin.action(description="Archive products")
+def mark_archived(modeladmin: admin.ModelAdmin, request: HttpRequest, queryset: QuerySet):
+    queryset.update(archived=True)
+
+
+@admin.action(description="Unarchive products")
+def mark_unarchived(modeladmin: admin.ModelAdmin, request: HttpRequest, queryset: QuerySet):
+    queryset.update(archived=False)
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
-    list_display = (
-        'name',
-        'price',
-        'discount',
-        'stock',
-        'is_available',
-        'is_archived',
-        'created_at',
-    )
-    search_fields = (
-        'name',
-        'description',
-        'price',
-        'discount',
-    )
-    list_filter = (
-        'is_available',
-        'is_archived',
-        'created_at',
-    )
-    fieldsets = [
-        (
-            None,
-            {
-                'fields': (
-                    'name',
-                    'description',
-                ),
-            },
-        ),
-        (
-            _('Price'),
-            {
-                'fields': (
-                    'price',
-                    'discount',
-                ),
-            },
-        ),
-        (
-            _('Additional options'),
-            {
-                'fields': (
-                    'stock',
-                    'is_available',
-                    'is_archived',
-                    'created_at',
-                ),
-                'classes': ('collapse',),
-            },
-        ),
+class ProductAdmin(admin.ModelAdmin, ExportAsCSVMixin):
+    actions = [
+        mark_archived,
+        mark_unarchived,
+        "export_csv",
     ]
-    inlines = [OrderInline]
-    actions = ['archive_products']
+    inlines = [
+        OrderInline,
+        ProductInline,
+    ]
+    # list_display = "pk", "name", "description", "price", "discount"
+    list_display = "pk", "name", "description_short", "price", "discount", "archived"
+    list_display_links = "pk", "name"
+    ordering = "-name", "pk"
+    search_fields = "name", "description"
+    fieldsets = [
+        (None, {
+           "fields": ("name", "description"),
+        }),
+        ("Price options", {
+            "fields": ("price", "discount"),
+            "classes": ("wide", "collapse"),
+        }),
+        ("Images", {
+            "fields": ("preview", ),
+        }),
+        ("Extra options", {
+            "fields": ("archived",),
+            "classes": ("collapse",),
+            "description": "Extra options. Field 'archived' is for soft delete",
+        })
+    ]
 
-    def archive_products(self, request, queryset):
-        queryset.update(is_archived=True)
+    def description_short(self, obj: Product) -> str:
+        if len(obj.description) < 48:
+            return obj.description
+        return obj.description[:48] + "..."
 
-    archive_products.short_description = _(
-        'Archive selected products',
-    )
+
+# admin.site.register(Product, ProductAdmin)
+
+
+# class ProductInline(admin.TabularInline):
+class ProductInline(admin.StackedInline):
+    model = Order.products.through
 
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = (
-        'id',
-        'customer_name',
-        'customer',
-        'created_at',
-    )
-    search_fields = (
-        'customer_name',
-        'customer__username',
-        'notes',
-    )
-    filter_horizontal = ('products',)
+    inlines = [
+        ProductInline,
+    ]
+    list_display = "delivery_address", "promocode", "created_at", "user_verbose"
+
+    def get_queryset(self, request):
+        return Order.objects.select_related("user").prefetch_related("products")
+
+    def user_verbose(self, obj: Order) -> str:
+        return obj.user.first_name or obj.user.username
