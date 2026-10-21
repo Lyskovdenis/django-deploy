@@ -1,54 +1,13 @@
 services:
-  app:
+  web:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - .:/app
+    container_name: mysite
+    restart: always
     ports:
       - "8000:8000"
-    environment:
-      - DEBUG=1
-      - SECRET_KEY=django-insecure-key-for-dev
-      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1] app
-    depends_on:
-      - loki
-    logging:
-      driver: loki
-      options:
-        loki-url: "http://loki:3100/loki/api/v1/push"
-    networks:
-      - app-net
-
-  loki:
-    image: grafana/loki:2.9.0
-    ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    env_file:
+      - .env
     volumes:
-      - loki-data:/loki
-    networks:
-      - app-net
-
-  grafana:
-    image: grafana/grafana:10.0.0
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    depends_on:
-      - loki
-    volumes:
-      - grafana-data:/var/lib/grafana
-    networks:
-      - app-net
-
-networks:
-  app-net:
-    driver: bridge
-
-volumes:
-  loki-data:
-  grafana-data:
+      - ./db.sqlite3:/app/mysite/db.sqlite3
